@@ -175,6 +175,6 @@ const server=http.createServer(async(req,res)=>{try{
  }
  let file=path.join(publicDir,decodeURIComponent(pathname));if(pathname==='/'||!path.extname(pathname))file=path.join(root,'index.html');
  if(!file.startsWith(publicDir+path.sep)&&file!==path.join(root,'index.html')){res.writeHead(403);return res.end();}
- fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found');}if(file===path.join(root,'index.html'))data=Buffer.from(data.toString('utf8').replaceAll('__SITE_URL__',siteOrigin));res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream'});res.end(data);});
+ fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found');}if(file===path.join(root,'index.html'))data=Buffer.from(data.toString('utf8').replaceAll('__SITE_URL__',siteOrigin));const ext=path.extname(file),headers={'Content-Type':mime[ext]||'application/octet-stream'};if(file===path.join(root,'index.html')||['.js','.css'].includes(ext))headers['Cache-Control']='no-store';res.writeHead(200,headers);res.end(data);});
 }catch(e){console.error(e);if(!res.headersSent)json(res,500,{error:'Unable to complete the request.'});}});
 const port=Number(process.env.PORT||3000),host=process.env.HOST||(process.env.RAILWAY_ENVIRONMENT_NAME?'0.0.0.0':'127.0.0.1');server.listen(port,host,()=>console.log(`ACT Concrete website listening on ${host}:${port}`));
