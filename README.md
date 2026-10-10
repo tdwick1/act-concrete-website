@@ -14,6 +14,8 @@ npm start
 
 Open `http://localhost:3000`. The admin dashboard is at `http://localhost:3000/admin`. The estimate form stores inquiries in `data/act.db`. It works even when the admin password has not been set; the dashboard then displays setup instructions. The database is excluded from Git.
 
+Admin login stays active for 14 days in a signed, HTTP-only cookie, including across page reloads, browser restarts, and server deployments when `ACT_ADMIN_PASSWORD` remains the same. Signing out removes the browser cookie. Changing the admin password invalidates existing sessions.
+
 ## Deploy on Railway from GitHub
 
 1. Create one Railway service from this repository. Railpack reads the Node 24 requirement in `package.json` and runs `npm start`.

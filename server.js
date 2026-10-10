@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { buildCustomerMessage, buildLeadEmails, parseAmountCents, sendResendEmail, validEmail } from './mailer.js';
+import { createSessionToken, SESSION_MAX_AGE_SECONDS, sessionKey, verifySessionToken } from './session.js';
 
 const root=process.cwd(), publicDir=path.join(root,'public'), dataDir=path.resolve(process.env.ACT_DATA_DIR||path.join(root,'data')), projectMediaDir=path.join(dataDir,'project-media');
 const siteOrigin=(()=>{const raw=process.env.SITE_URL||(process.env.RAILWAY_PUBLIC_DOMAIN?`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`:`http://localhost:${process.env.PORT||3000}`);try{const url=new URL(raw);return ['http:','https:'].includes(url.protocol)?url.origin:'http://localhost:3000'}catch{return 'http://localhost:3000'}})();
@@ -24,7 +25,7 @@ if(!db.prepare("SELECT value FROM settings WHERE key='gallery_seeded'").get()){
  seed.run('slab-original',new Date(addedAt-1000).toISOString(),'A clean foundation for the space','Slabs','A garage slab project shown during reinforcement and after finishing.','/images/slab-prep.webp','/images/slab-finished.webp');
  db.prepare("INSERT INTO settings (key,value) VALUES ('gallery_seeded','1')").run();
 }
-const sessions=new Map(), attempts=new Map(), password=process.env.ACT_ADMIN_PASSWORD||'';
+const attempts=new Map(), password=process.env.ACT_ADMIN_PASSWORD||'',adminSessionKey=sessionKey(password,process.env.ACT_SESSION_SECRET||'');
 const mailConfig={apiKey:process.env.RESEND_API_KEY||'',from:process.env.RESEND_FROM_EMAIL||'',leadFrom:process.env.RESEND_LEADS_FROM_EMAIL||process.env.RESEND_FROM_EMAIL||'',quoteFrom:process.env.RESEND_QUOTES_FROM_EMAIL||process.env.RESEND_FROM_EMAIL||'',ownerEmail:process.env.ACT_LEAD_EMAIL||'',siteUrl:process.env.SITE_URL||''};
 const senderAddress=value=>(/<([^<>]+)>$/.exec(value)?.[1]||value);
 const quoteEmailConfigured=Boolean(mailConfig.apiKey&&validEmail(senderAddress(mailConfig.quoteFrom)));
@@ -60,7 +61,8 @@ const projectCategories=new Set(['Walkways','Slabs','Driveways','Patios','Other 
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.xml':'application/xml','.txt':'text/plain'};
 function json(res,status,body){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(body));}
 function read(req,limit=5_000_000){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>limit){reject(new Error('Request too large'));req.destroy();}});req.on('end',()=>{try{resolve(JSON.parse(raw||'{}'))}catch{reject(new Error('Invalid JSON'))}});req.on('error',reject);});}
-function authenticated(req){const token=/(?:^|; )act_session=([^;]+)/.exec(req.headers.cookie||'')?.[1];const expires=token&&sessions.get(token);return Boolean(expires&&expires>Date.now());}
+function authenticated(req){const token=/(?:^|; )act_session=([^;]+)/.exec(req.headers.cookie||'')?.[1];return verifySessionToken(token,adminSessionKey);}
+function secureCookie(req){return req.socket.encrypted||req.headers['x-forwarded-proto']==='https'?'; Secure':'';}
 function clean(v,max=2000){return String(v??'').trim().slice(0,max);}
 function authorized(req,res){if(!authenticated(req)){json(res,401,{error:'Admin sign-in required.'});return false;}return true;}
 function projectRows(){return db.prepare('SELECT id,created_at,title,category,description,before_image,after_image FROM projects ORDER BY created_at DESC, rowid DESC').all();}
@@ -109,10 +111,10 @@ const server=http.createServer(async(req,res)=>{try{
   const b=await read(req),a=Buffer.from(String(b.password||'')),c=Buffer.from(password);
   if(a.length!==c.length||!crypto.timingSafeEqual(a,c)){const count=previous.count+1;attempts.set(ip,{count:count>=5?0:count,until:count>=5?Date.now()+15*60_000:0});return json(res,401,{error:'Incorrect password.'});}
   attempts.delete(ip);
-  const token=crypto.randomBytes(32).toString('hex');sessions.set(token,Date.now()+8*60*60*1000);
-  res.writeHead(200,{'Content-Type':'application/json','Set-Cookie':`act_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${req.socket.encrypted?'; Secure':''}`});return res.end('{"ok":true}');
+  const token=createSessionToken(adminSessionKey);
+  res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':`act_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}${secureCookie(req)}`});return res.end('{"ok":true}');
  }
- if(pathname==='/api/admin/logout'&&req.method==='POST'){const token=/(?:^|; )act_session=([^;]+)/.exec(req.headers.cookie||'')?.[1];sessions.delete(token);res.writeHead(200,{'Content-Type':'application/json','Set-Cookie':'act_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});return res.end('{"ok":true}');}
+ if(pathname==='/api/admin/logout'&&req.method==='POST'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Set-Cookie':`act_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureCookie(req)}`});return res.end('{"ok":true}');}
  if(pathname.startsWith('/api/admin/')){
   if(!authorized(req,res))return;
   if(pathname==='/api/admin/projects'&&req.method==='GET')return json(res,200,{projects:projectRows()});
