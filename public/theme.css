@@ -1,0 +1,45 @@
+/* Shared navbar controls */
+.nav-actions{gap:10px}
+.nav-phone{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:43px;padding:8px 14px;border:1px solid #617061;background:#1a241c;color:#fff;font:700 17px var(--font-head);letter-spacing:.03em;white-space:nowrap;transition:border-color .2s,background .2s,transform .2s}
+.nav-phone::before{content:'CALL';display:inline-block;border-right:1px solid #617061;padding-right:10px;color:var(--green);font:800 10px var(--font-body);letter-spacing:.12em}
+.nav-phone:hover,.nav-phone:focus-visible{border-color:var(--green);background:#263b29;transform:translateY(-1px)}
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:43px;min-width:76px;padding:8px 10px;border:1px solid #617061;background:#1a241c;color:#fff;font:800 10px var(--font-body);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;transition:border-color .2s,background .2s}
+.theme-toggle:hover,.theme-toggle:focus-visible{border-color:var(--green);background:#263b29}
+.theme-icon{font:700 19px var(--font-body);line-height:1;color:var(--green)}
+.theme-toggle:focus-visible,.nav-phone:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.admin-top .theme-toggle{margin-left:auto;margin-right:10px}
+
+/* The existing charcoal sections stay consistent; light surfaces become deep green charcoal. */
+html[data-theme=dark]{color-scheme:dark}
+html[data-theme=dark] body{background:#0d140f;color:#eef4ec}
+html[data-theme=dark] .trust-bar{color:#0a0d0b}
+html[data-theme=dark] .services-section,html[data-theme=dark] .process-section{background:#111a13}
+html[data-theme=dark] .work-section,html[data-theme=dark] .reviews-teaser,html[data-theme=dark] .values,html[data-theme=dark] .contact-section{background:#172219}
+html[data-theme=dark] .section-head p,html[data-theme=dark] .step p,html[data-theme=dark] .reviews-teaser p,html[data-theme=dark] .service-detail p,html[data-theme=dark] .about-text p,html[data-theme=dark] .value-grid p,html[data-theme=dark] .empty-reviews p,html[data-theme=dark] .contact-aside>p,html[data-theme=dark] .contact-mini p,html[data-theme=dark] .gallery-note{color:#bdcbbc}
+html[data-theme=dark] .services-bottom{color:#c2d0c1;border-color:#3d4b3f}
+html[data-theme=dark] .step{border-color:#a8b9a7}
+html[data-theme=dark] .value-grid>div,html[data-theme=dark] .form-card{background:#202c22;color:#f3f7f0}
+html[data-theme=dark] .contact-phone{border-color:#4c5e4d}
+html[data-theme=dark] .form-top,html[data-theme=dark] .form-card>p,html[data-theme=dark] .upload-field small{color:#b2c0b0;border-color:#455447}
+html[data-theme=dark] .field input,html[data-theme=dark] .field select,html[data-theme=dark] .field textarea{background:#131d15;border-color:#4c5e4d;color:#f3f7f0}
+html[data-theme=dark] .field input::placeholder,html[data-theme=dark] .field textarea::placeholder{color:#9eae9f}
+html[data-theme=dark] .chip{border-color:#708371;color:#eef4ec}
+html[data-theme=dark] .chip.active,html[data-theme=dark] .chip:hover{background:var(--green);border-color:var(--green);color:#0a0d0b}
+html[data-theme=dark] .btn-outline-dark{color:#f3f7f0;border-color:#708371}
+html[data-theme=dark] .btn-outline-dark:hover{background:var(--green);border-color:var(--green);color:#0a0d0b}
+html[data-theme=dark] .info-band{background:#0d140f}
+
+/* Admin and lead details follow the same preference. */
+html[data-theme=dark] .admin-shell{background:#111a13;color:#eef4ec}
+html[data-theme=dark] .admin-login,html[data-theme=dark] .stat,html[data-theme=dark] .leads-panel,html[data-theme=dark] .lead-dialog{background:#202c22;color:#eef4ec;border-color:#3b4b3d}
+html[data-theme=dark] .admin-login p,html[data-theme=dark] .panel-heading p,html[data-theme=dark] .stat span,html[data-theme=dark] .lead-date,html[data-theme=dark] .lead-details b{color:#b1c0b1}
+html[data-theme=dark] .panel-heading,html[data-theme=dark] td,html[data-theme=dark] th,html[data-theme=dark] .lead-details div{border-color:#3b4b3d}
+html[data-theme=dark] .filters input,html[data-theme=dark] .filters select,html[data-theme=dark] .lead-dialog textarea{background:#131d15;border-color:#4c5e4d;color:#eef4ec}
+html[data-theme=dark] th{background:#172219;color:#b7c8b5}
+html[data-theme=dark] .notes p{background:#152118}
+html[data-theme=dark] .status-select{background:#29452d;color:#d4ffd0}
+html[data-theme=dark] .empty-table{color:#b7c8b5}
+
+@media(max-width:1150px){.nav-phone{display:none}}
+@media(max-width:850px){.nav-actions{gap:9px}.theme-toggle{min-width:72px}.admin-top .theme-toggle{margin-left:auto}}
+@media(max-width:620px){.theme-toggle{min-width:43px;padding:7px}.theme-label{display:none}.theme-icon{font-size:20px}}
