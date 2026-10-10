@@ -47,6 +47,12 @@ SITE_URL=https://your-domain.com
 
 Restart the server after changing the settings. Each new inquiry is saved first. Then the server queues an owner alert and, when the customer provides an email address, a copy of their inquiry for the customer. The customer message explicitly says that it is **not a price quote**. Uploaded photos stay in the private dashboard and are not attached to emails. Sending errors do not discard leads; pending emails are retried automatically, and errors are logged by the server. Email jobs are stored in `data/act.db` alongside the leads. If these variables are unset, the form still saves leads but sends no email. Do not put the Resend API key in browser code or commit `.env`.
 
+## Send a customer message or quote
+
+In `/admin`, open a lead that includes an email address. Under **Email customer**, enter a message and, for a quote, an optional dollar amount. Review the recipient and amount in the confirmation prompt, then send. The email is queued through Resend. The lead detail shows the message, amount, and delivery status; use **Refresh status** to check for delivery. A successful quote moves an open lead to **Estimate Sent**. A message without an amount moves a new lead to **Contacted**. The history is saved in `data/act.db`.
+
+This feature requires `RESEND_API_KEY` and a verified `RESEND_FROM_EMAIL`. Set `ACT_LEAD_EMAIL` as well so customer replies go to an inbox you monitor and new lead alerts continue to work. Customers who did not provide an email cannot be emailed from the dashboard.
+
 ## Business content
 
 - The phone number and free-estimate message come from the supplied ACT Concrete logo.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildLeadEmails, sendResendEmail, validEmail } from '../mailer.js';
+import { buildCustomerMessage, buildLeadEmails, parseAmountCents, sendResendEmail, validEmail } from '../mailer.js';
 
 test('owner alert and customer copy include the inquiry without executing customer HTML',()=>{
  const lead={name:'Ada <script>alert(1)</script>',phone:'304-555-0100',email:'ada@example.com',service:'Concrete Slab',details:'Garage <b>floor</b>',photo:'data:image/png;base64,abc'};
@@ -28,4 +28,28 @@ test('optional customer email and Resend idempotency',async()=>{
  assert.equal(request.url,'https://api.resend.com/emails');
  assert.equal(request.options.headers['Idempotency-Key'],'job-123');
  assert.equal(request.options.headers.Authorization,'Bearer test-key');
+});
+
+test('admin quote amounts are parsed exactly and invalid prices are rejected',()=>{
+ assert.equal(parseAmountCents(''),null);
+ assert.equal(parseAmountCents('1'),100);
+ assert.equal(parseAmountCents('1250.5'),125050);
+ assert.equal(parseAmountCents('999999.99'),99999999);
+ for(const value of ['0','0.00','-10','1.999','1,000','1000000','abc'])assert.throws(()=>parseAmountCents(value));
+});
+
+test('admin quote and message emails include the price and escape customer content',()=>{
+ const lead={name:'Ada <Owner>',email:'ada@example.com',service:'Concrete Slab'};
+ const config={from:'ACT Concrete <estimates@act.example>',ownerEmail:'owner@act.example'};
+ const quote=buildCustomerMessage(lead,config,{amountCents:125050,message:'Garage floor <script>alert(1)</script>'});
+ assert.deepEqual(quote.to,['ada@example.com']);
+ assert.equal(quote.reply_to,'owner@act.example');
+ assert.match(quote.subject,/\$1,250\.50/);
+ assert.match(quote.text,/Garage floor <script>/);
+ assert.match(quote.html,/&lt;script&gt;/);
+ assert.doesNotMatch(quote.html,/<script>/);
+ const message=buildCustomerMessage(lead,{...config,ownerEmail:''},{amountCents:null,message:'We can visit Tuesday.'});
+ assert.equal(message.subject,'A message from ACT Concrete');
+ assert.equal(message.reply_to,undefined);
+ assert.doesNotMatch(message.text,/quoted amount/);
 });

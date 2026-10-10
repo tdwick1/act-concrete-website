@@ -26,6 +26,25 @@
 .managed-copy button{border:1px solid #bfcbbc;background:transparent;color:#19271b;padding:7px 13px;margin-right:7px;font-size:10px;font-weight:800;text-transform:uppercase}
 .managed-copy button:hover{border-color:var(--green2)}
 .managed-copy button[data-delete-project]{color:#a93030}
+.customer-message-section{border-top:1px solid #dde5db;margin-top:26px;padding-top:20px}
+.customer-message-section h3{margin:0 0 8px}
+.customer-message-hint,.customer-message-unavailable,.customer-message-empty{font-size:13px;line-height:1.5;color:#657265}
+#customer-message-form{display:grid;gap:12px;margin:18px 0 24px}
+#customer-message-form .field{margin:0}
+#customer-message-form input,#customer-message-form textarea{width:100%}
+#customer-message-form button{justify-self:start}
+.customer-message-status{font-size:12px;margin:0}
+.outbound-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px}
+.outbound-history-heading h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.outbound-history-heading button{background:none;border:0;color:#247d2a;font-size:11px;font-weight:800;text-decoration:underline;cursor:pointer}
+.outbound-history{display:grid;gap:10px;margin-top:10px}
+.outbound-message{padding:14px;border:1px solid #dce6da;background:#f8fbf7}
+.outbound-message-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.outbound-message small{display:block;color:#667667;margin-top:5px}
+.outbound-message p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.55;margin:12px 0 0}
+.delivery-status{font-size:11px;font-weight:800;color:#55705b}
+.delivery-status.status-sent{color:#217c29}
+.delivery-status.status-failed{color:#ac3636}
 .current-pair{margin-bottom:20px}
 .current-pair img{height:120px}
 #project-form-status{font-size:12px;margin:16px 0 0}
@@ -38,5 +57,11 @@ html[data-theme=dark] .managed-project{border-color:#3b4b3d}
 html[data-theme=dark] .managed-copy p,html[data-theme=dark] .upload-pair small,html[data-theme=dark] .upload-hint,html[data-theme=dark] .managed-photos figcaption,html[data-theme=dark] .current-pair span{color:#b9c9b8}
 html[data-theme=dark] .managed-copy button{border-color:#657a66;color:#f1f7ef}
 html[data-theme=dark] .managed-copy button[data-delete-project]{color:#ff9c9c}
+html[data-theme=dark] .customer-message-section{border-color:#435446}
+html[data-theme=dark] .customer-message-hint,html[data-theme=dark] .customer-message-unavailable,html[data-theme=dark] .customer-message-empty,html[data-theme=dark] .outbound-message small{color:#b9c9b8}
+html[data-theme=dark] .outbound-message{background:#233327;border-color:#435446}
+html[data-theme=dark] .delivery-status{color:#b9c9b8}
+html[data-theme=dark] .delivery-status.status-sent,html[data-theme=dark] .outbound-history-heading button{color:#63dc63}
+html[data-theme=dark] .delivery-status.status-failed{color:#ff9c9c}
 @media(max-width:1150px){.gallery-admin-layout{grid-template-columns:1fr}}
 @media(max-width:620px){.admin-tabs{margin-top:0}.admin-tabs button{flex:1;padding:12px 8px}.gallery-editor .panel-heading,.gallery-manager .panel-heading,#project-form{padding:18px}.upload-pair{grid-template-columns:1fr}.managed-project{grid-template-columns:1fr;padding:18px}.managed-photos img{height:150px}}

@@ -35,6 +35,29 @@ export function buildLeadEmails(lead,{from,ownerEmail,siteUrl}){
   return {owner,customer};
 }
 
+export function parseAmountCents(value){
+  const amount=String(value??'').trim();
+  if(!amount)return null;
+  if(!/^(?:0|[1-9]\d{0,5})(?:\.\d{1,2})?$/.test(amount))throw new Error('Enter a dollar amount up to $999,999.99 with no more than two decimal places.');
+  const [dollars,cents='']=amount.split('.');
+  const total=Number(dollars)*100+Number(cents.padEnd(2,'0'));
+  if(total<1)throw new Error('The quote amount must be greater than zero.');
+  return total;
+}
+
+export function buildCustomerMessage(lead,{from,ownerEmail},{amountCents,message}){
+  const amount=amountCents===null?null:new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amountCents/100);
+  const heading=amount?'Your ACT Concrete quote':'A message from ACT Concrete';
+  const intro=amount?`For your ${lead.service} inquiry, the quoted amount is ${amount}.`:`Regarding your ${lead.service} inquiry:`;
+  const email={
+    from,to:[lead.email],subject:amount?`Your ACT Concrete quote: ${amount}`:heading,
+    html:`<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">${heading}</h1><p>Hello ${escapeHtml(lead.name)},</p><p>${escapeHtml(intro)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p>Questions? Reply to this email or call <a href="tel:+13043772690">304-377-2690</a>.</p><p>ACT Concrete</p></div>`,
+    text:`${heading}\n\nHello ${lead.name},\n\n${intro}\n\n${message}\n\nQuestions? Reply to this email or call 304-377-2690.\n\nACT Concrete`
+  };
+  if(validEmail(ownerEmail))email.reply_to=ownerEmail;
+  return email;
+}
+
 export async function sendResendEmail(message,{apiKey,idempotencyKey,fetchImpl=fetch}){
   const response=await fetchImpl('https://api.resend.com/emails',{
     method:'POST',

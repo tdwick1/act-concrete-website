@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { buildLeadEmails, sendResendEmail, validEmail } from './mailer.js';
+import { buildCustomerMessage, buildLeadEmails, parseAmountCents, sendResendEmail, validEmail } from './mailer.js';
 
 const root=process.cwd(), publicDir=path.join(root,'public'), dataDir=path.resolve(process.env.ACT_DATA_DIR||path.join(root,'data')), projectMediaDir=path.join(dataDir,'project-media');
 const siteOrigin=(()=>{const raw=process.env.SITE_URL||(process.env.RAILWAY_PUBLIC_DOMAIN?`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`:`http://localhost:${process.env.PORT||3000}`);try{const url=new URL(raw);return ['http:','https:'].includes(url.protocol)?url.origin:'http://localhost:3000'}catch{return 'http://localhost:3000'}})();
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, created_at TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL, FOREIGN KEY(lead_id) REFERENCES leads(id));
 CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, title TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, before_image TEXT NOT NULL, after_image TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS email_jobs (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, next_attempt_at TEXT NOT NULL, sent_at TEXT, last_error TEXT);
+CREATE TABLE IF NOT EXISTS outbound_messages (id TEXT PRIMARY KEY, lead_id TEXT NOT NULL, created_at TEXT NOT NULL, recipient TEXT NOT NULL, amount_cents INTEGER, body TEXT NOT NULL, email_job_id TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
 if(!db.prepare("SELECT value FROM settings WHERE key='gallery_seeded'").get()){
  const seed=db.prepare('INSERT INTO projects (id,created_at,title,category,description,before_image,after_image) VALUES (?,?,?,?,?,?,?)');
@@ -26,17 +27,20 @@ if(!db.prepare("SELECT value FROM settings WHERE key='gallery_seeded'").get()){
 const sessions=new Map(), attempts=new Map(), password=process.env.ACT_ADMIN_PASSWORD||'';
 const mailConfig={apiKey:process.env.RESEND_API_KEY||'',from:process.env.RESEND_FROM_EMAIL||'',ownerEmail:process.env.ACT_LEAD_EMAIL||'',siteUrl:process.env.SITE_URL||''};
 const senderAddress=/<([^<>]+)>$/.exec(mailConfig.from)?.[1]||mailConfig.from;
-const emailConfigured=Boolean(mailConfig.apiKey&&validEmail(mailConfig.ownerEmail)&&validEmail(senderAddress));
+const quoteEmailConfigured=Boolean(mailConfig.apiKey&&validEmail(senderAddress));
+const emailConfigured=Boolean(quoteEmailConfigured&&validEmail(mailConfig.ownerEmail));
 let emailWorkerRunning=false;
 async function processEmailQueue(){
- if(!emailConfigured||emailWorkerRunning)return;
+ if(!quoteEmailConfigured||emailWorkerRunning)return;
  emailWorkerRunning=true;
  try{
-  const jobs=db.prepare("SELECT id,payload,attempts FROM email_jobs WHERE status='pending' AND next_attempt_at<=? ORDER BY next_attempt_at LIMIT 20").all(new Date().toISOString());
+  const jobs=db.prepare("SELECT id,lead_id,kind,payload,attempts FROM email_jobs WHERE status='pending' AND next_attempt_at<=? ORDER BY next_attempt_at LIMIT 20").all(new Date().toISOString());
   for(const job of jobs){
    try{
     await sendResendEmail(JSON.parse(job.payload),{apiKey:mailConfig.apiKey,idempotencyKey:job.id});
     db.prepare("UPDATE email_jobs SET status='sent',sent_at=?,last_error=NULL WHERE id=?").run(new Date().toISOString(),job.id);
+    if(job.kind==='quote')db.prepare("UPDATE leads SET status='Estimate Sent' WHERE id=? AND status IN ('New','Contacted','Estimate Scheduled')").run(job.lead_id);
+    if(job.kind==='message')db.prepare("UPDATE leads SET status='Contacted' WHERE id=? AND status='New'").run(job.lead_id);
    }catch(error){
     const attempt=job.attempts+1,permanent=error.permanent||attempt>=6;
     const delay=Math.min(60_000*5**(attempt-1),6*60*60_000);
@@ -47,8 +51,8 @@ async function processEmailQueue(){
  }finally{emailWorkerRunning=false;}
 }
 setInterval(processEmailQueue,30_000).unref();
-if(emailConfigured)setImmediate(processEmailQueue);
-else console.warn('Lead email is disabled. Set RESEND_API_KEY, RESEND_FROM_EMAIL, and ACT_LEAD_EMAIL to enable it.');
+if(quoteEmailConfigured)setImmediate(processEmailQueue);
+if(!emailConfigured)console.warn('Lead email is disabled. Set RESEND_API_KEY, RESEND_FROM_EMAIL, and ACT_LEAD_EMAIL to enable it.');
 const statuses=new Set(['New','Contacted','Estimate Scheduled','Estimate Sent','Won','Lost']);
 const services=new Set(['Sidewalk / Walkway','Concrete Slab','Other Concrete Work']);
 const projectCategories=new Set(['Walkways','Slabs','Driveways','Patios','Other Concrete Work']);
@@ -71,7 +75,7 @@ function writeProjectImage(image){const filename=`${crypto.randomUUID()}.${image
 function removeProjectImage(url){if(!url?.startsWith('/project-media/'))return;const filename=url.slice('/project-media/'.length);if(/^[a-f0-9-]{36}\.(jpg|png|webp)$/.test(filename))fs.rmSync(path.join(projectMediaDir,filename),{force:true});}
 const server=http.createServer(async(req,res)=>{try{
  const pathname=new URL(req.url,'http://localhost').pathname;
- if(pathname==='/api/config')return json(res,200,{adminConfigured:!!password,adminAuthenticated:authenticated(req),emailConfigured});
+ if(pathname==='/api/config')return json(res,200,{adminConfigured:!!password,adminAuthenticated:authenticated(req),emailConfigured,quoteEmailConfigured});
  if(pathname==='/api/projects'&&req.method==='GET')return json(res,200,{projects:projectRows()});
  if(pathname.startsWith('/project-media/')){
   const filename=pathname.slice('/project-media/'.length);
@@ -137,13 +141,30 @@ const server=http.createServer(async(req,res)=>{try{
    const rows=db.prepare('SELECT created_at,name,phone,email,address,city,service,size,timeline,budget,details,status FROM leads ORDER BY created_at DESC').all(),fields=['created_at','name','phone','email','address','city','service','size','timeline','budget','details','status'];
    const csv=[fields.join(','),...rows.map(row=>fields.map(f=>'"'+String(row[f]??'').replaceAll('"','""')+'"').join(','))].join('\r\n');res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="act-leads.csv"','Cache-Control':'no-store'});return res.end(csv);
   }
-  const match=/^\/api\/admin\/leads\/([a-f0-9-]+)(?:\/(notes|photo))?$/.exec(pathname);
+  const match=/^\/api\/admin\/leads\/([a-f0-9-]+)(?:\/(notes|photo|messages))?$/.exec(pathname);
   if(match){const[,id,part]=match,lead=db.prepare('SELECT * FROM leads WHERE id=?').get(id);if(!lead)return json(res,404,{error:'Lead not found.'});
    if(part==='photo'&&req.method==='GET'){if(!lead.photo)return json(res,404,{error:'No photo.'});const m=/^data:image\/(jpeg|png|webp);base64,(.*)$/.exec(lead.photo);if(!m)return json(res,404,{error:'Invalid photo.'});res.writeHead(200,{'Content-Type':`image/${m[1]}`,'Cache-Control':'no-store'});return res.end(Buffer.from(m[2],'base64'));}
    if(part==='notes'&&req.method==='POST'){const b=await read(req),body=clean(b.body,2000);if(!body)return json(res,400,{error:'Note cannot be empty.'});db.prepare('INSERT INTO notes VALUES (?,?,?,?)').run(crypto.randomUUID(),id,new Date().toISOString(),body);return json(res,201,{ok:true});}
-   if(!part&&req.method==='GET')return json(res,200,{lead:{...lead,photo:undefined},notes:db.prepare('SELECT id,created_at,body FROM notes WHERE lead_id=? ORDER BY created_at DESC').all(id)});
+   if(part==='messages'&&req.method==='POST'){
+    if(!quoteEmailConfigured)return json(res,503,{error:'Set RESEND_API_KEY and RESEND_FROM_EMAIL before sending customer messages.'});
+    if(!validEmail(lead.email))return json(res,400,{error:'This lead does not have a valid email address.'});
+    const b=await read(req,16_000),message=String(b.message??'').trim();
+    if(!message||message.length>4000)return json(res,400,{error:'Enter a message of up to 4,000 characters.'});
+    let amountCents;try{amountCents=parseAmountCents(b.amount)}catch(error){return json(res,400,{error:error.message});}
+    const createdAt=new Date().toISOString(),jobId=crypto.randomUUID(),messageId=crypto.randomUUID();
+    const payload=buildCustomerMessage(lead,mailConfig,{amountCents,message});
+    db.exec('BEGIN');
+    try{
+     db.prepare('INSERT INTO email_jobs (id,lead_id,kind,payload,next_attempt_at) VALUES (?,?,?,?,?)').run(jobId,id,amountCents===null?'message':'quote',JSON.stringify(payload),createdAt);
+     db.prepare('INSERT INTO outbound_messages (id,lead_id,created_at,recipient,amount_cents,body,email_job_id) VALUES (?,?,?,?,?,?,?)').run(messageId,id,createdAt,lead.email,amountCents,message,jobId);
+     db.exec('COMMIT');
+    }catch(error){db.exec('ROLLBACK');throw error;}
+    setImmediate(processEmailQueue);
+    return json(res,202,{ok:true,id:messageId,status:'pending'});
+   }
+   if(!part&&req.method==='GET')return json(res,200,{lead:{...lead,photo:undefined},notes:db.prepare('SELECT id,created_at,body FROM notes WHERE lead_id=? ORDER BY created_at DESC').all(id),messages:db.prepare('SELECT m.id,m.created_at,m.recipient,m.amount_cents,m.body,j.status,j.sent_at,j.last_error FROM outbound_messages m JOIN email_jobs j ON j.id=m.email_job_id WHERE m.lead_id=? ORDER BY m.created_at DESC, m.rowid DESC').all(id),quoteEmailConfigured});
    if(!part&&req.method==='PATCH'){const b=await read(req);if(!statuses.has(b.status))return json(res,400,{error:'Invalid status.'});db.prepare('UPDATE leads SET status=? WHERE id=?').run(b.status,id);return json(res,200,{ok:true});}
-   if(!part&&req.method==='DELETE'){db.prepare('DELETE FROM notes WHERE lead_id=?').run(id);db.prepare('DELETE FROM leads WHERE id=?').run(id);return json(res,200,{ok:true});}
+   if(!part&&req.method==='DELETE'){db.exec('BEGIN');try{db.prepare('DELETE FROM notes WHERE lead_id=?').run(id);db.prepare('DELETE FROM outbound_messages WHERE lead_id=?').run(id);db.prepare('DELETE FROM email_jobs WHERE lead_id=?').run(id);db.prepare('DELETE FROM leads WHERE id=?').run(id);db.exec('COMMIT')}catch(error){db.exec('ROLLBACK');throw error;}return json(res,200,{ok:true});}
   }
   return json(res,404,{error:'Not found.'});
  }
