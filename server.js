@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { buildLeadEmails, sendResendEmail, validEmail } from './mailer.js';
 
 const root=process.cwd(), publicDir=path.join(root,'public'), dataDir=path.resolve(process.env.ACT_DATA_DIR||path.join(root,'data')), projectMediaDir=path.join(dataDir,'project-media');
+const siteOrigin=(()=>{const raw=process.env.SITE_URL||(process.env.RAILWAY_PUBLIC_DOMAIN?`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`:`http://localhost:${process.env.PORT||3000}`);try{const url=new URL(raw);return ['http:','https:'].includes(url.protocol)?url.origin:'http://localhost:3000'}catch{return 'http://localhost:3000'}})();
 fs.mkdirSync(dataDir,{recursive:true});
 fs.mkdirSync(projectMediaDir,{recursive:true});
 const db=new DatabaseSync(path.join(dataDir,'act.db'));
@@ -148,11 +149,11 @@ const server=http.createServer(async(req,res)=>{try{
  }
  if(pathname.startsWith('/api/'))return json(res,404,{error:'Not found.'});
  if(pathname==='/sitemap.xml'){
-  const base=(process.env.SITE_URL||`http://${req.headers.host||'localhost:3000'}`).replace(/\/$/,'');const pages=['/','/services','/services/walkways','/services/slabs','/projects','/about','/reviews','/contact'];
-  const xml=`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${pages.map(p=>`<url><loc>${base}${p}</loc></url>`).join('')}</urlset>`;res.writeHead(200,{'Content-Type':'application/xml; charset=utf-8'});return res.end(xml);
+  const pages=['/','/services','/services/walkways','/services/slabs','/projects','/about','/reviews','/contact'];
+  const xml=`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${pages.map(p=>`<url><loc>${siteOrigin}${p}</loc></url>`).join('')}</urlset>`;res.writeHead(200,{'Content-Type':'application/xml; charset=utf-8'});return res.end(xml);
  }
  let file=path.join(publicDir,decodeURIComponent(pathname));if(pathname==='/'||!path.extname(pathname))file=path.join(root,'index.html');
  if(!file.startsWith(publicDir+path.sep)&&file!==path.join(root,'index.html')){res.writeHead(403);return res.end();}
- fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found');}res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream'});res.end(data);});
+ fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found');}if(file===path.join(root,'index.html'))data=Buffer.from(data.toString('utf8').replaceAll('__SITE_URL__',siteOrigin));res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream'});res.end(data);});
 }catch(e){console.error(e);if(!res.headersSent)json(res,500,{error:'Unable to complete the request.'});}});
 const port=Number(process.env.PORT||3000),host=process.env.HOST||(process.env.RAILWAY_ENVIRONMENT_NAME?'0.0.0.0':'127.0.0.1');server.listen(port,host,()=>console.log(`ACT Concrete website listening on ${host}:${port}`));
