@@ -25,13 +25,14 @@ if(!db.prepare("SELECT value FROM settings WHERE key='gallery_seeded'").get()){
  db.prepare("INSERT INTO settings (key,value) VALUES ('gallery_seeded','1')").run();
 }
 const sessions=new Map(), attempts=new Map(), password=process.env.ACT_ADMIN_PASSWORD||'';
-const mailConfig={apiKey:process.env.RESEND_API_KEY||'',from:process.env.RESEND_FROM_EMAIL||'',ownerEmail:process.env.ACT_LEAD_EMAIL||'',siteUrl:process.env.SITE_URL||''};
-const senderAddress=/<([^<>]+)>$/.exec(mailConfig.from)?.[1]||mailConfig.from;
-const quoteEmailConfigured=Boolean(mailConfig.apiKey&&validEmail(senderAddress));
-const emailConfigured=Boolean(quoteEmailConfigured&&validEmail(mailConfig.ownerEmail));
+const mailConfig={apiKey:process.env.RESEND_API_KEY||'',from:process.env.RESEND_FROM_EMAIL||'',leadFrom:process.env.RESEND_LEADS_FROM_EMAIL||process.env.RESEND_FROM_EMAIL||'',quoteFrom:process.env.RESEND_QUOTES_FROM_EMAIL||process.env.RESEND_FROM_EMAIL||'',ownerEmail:process.env.ACT_LEAD_EMAIL||'',siteUrl:process.env.SITE_URL||''};
+const senderAddress=value=>(/<([^<>]+)>$/.exec(value)?.[1]||value);
+const quoteEmailConfigured=Boolean(mailConfig.apiKey&&validEmail(senderAddress(mailConfig.quoteFrom)));
+const emailConfigured=Boolean(mailConfig.apiKey&&validEmail(senderAddress(mailConfig.leadFrom))&&validEmail(mailConfig.ownerEmail));
+const mailQueueConfigured=quoteEmailConfigured||emailConfigured;
 let emailWorkerRunning=false;
 async function processEmailQueue(){
- if(!quoteEmailConfigured||emailWorkerRunning)return;
+ if(!mailQueueConfigured||emailWorkerRunning)return;
  emailWorkerRunning=true;
  try{
   const jobs=db.prepare("SELECT id,lead_id,kind,payload,attempts FROM email_jobs WHERE status='pending' AND next_attempt_at<=? ORDER BY next_attempt_at LIMIT 20").all(new Date().toISOString());
@@ -51,8 +52,8 @@ async function processEmailQueue(){
  }finally{emailWorkerRunning=false;}
 }
 setInterval(processEmailQueue,30_000).unref();
-if(quoteEmailConfigured)setImmediate(processEmailQueue);
-if(!emailConfigured)console.warn('Lead email is disabled. Set RESEND_API_KEY, RESEND_FROM_EMAIL, and ACT_LEAD_EMAIL to enable it.');
+if(mailQueueConfigured)setImmediate(processEmailQueue);
+if(!emailConfigured)console.warn('Lead email is disabled. Set RESEND_API_KEY, RESEND_LEADS_FROM_EMAIL (or RESEND_FROM_EMAIL), and ACT_LEAD_EMAIL to enable it.');
 const statuses=new Set(['New','Contacted','Estimate Scheduled','Estimate Sent','Won','Lost']);
 const services=new Set(['Sidewalk / Walkway','Concrete Slab','Other Concrete Work']);
 const projectCategories=new Set(['Walkways','Slabs','Driveways','Patios','Other Concrete Work']);
@@ -146,7 +147,7 @@ const server=http.createServer(async(req,res)=>{try{
    if(part==='photo'&&req.method==='GET'){if(!lead.photo)return json(res,404,{error:'No photo.'});const m=/^data:image\/(jpeg|png|webp);base64,(.*)$/.exec(lead.photo);if(!m)return json(res,404,{error:'Invalid photo.'});res.writeHead(200,{'Content-Type':`image/${m[1]}`,'Cache-Control':'no-store'});return res.end(Buffer.from(m[2],'base64'));}
    if(part==='notes'&&req.method==='POST'){const b=await read(req),body=clean(b.body,2000);if(!body)return json(res,400,{error:'Note cannot be empty.'});db.prepare('INSERT INTO notes VALUES (?,?,?,?)').run(crypto.randomUUID(),id,new Date().toISOString(),body);return json(res,201,{ok:true});}
    if(part==='messages'&&req.method==='POST'){
-    if(!quoteEmailConfigured)return json(res,503,{error:'Set RESEND_API_KEY and RESEND_FROM_EMAIL before sending customer messages.'});
+    if(!quoteEmailConfigured)return json(res,503,{error:'Set RESEND_API_KEY and RESEND_QUOTES_FROM_EMAIL (or RESEND_FROM_EMAIL) before sending customer messages.'});
     if(!validEmail(lead.email))return json(res,400,{error:'This lead does not have a valid email address.'});
     const b=await read(req,16_000),message=String(b.message??'').trim();
     if(!message||message.length>4000)return json(res,400,{error:'Enter a message of up to 4,000 characters.'});

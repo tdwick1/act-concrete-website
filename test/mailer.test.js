@@ -4,7 +4,9 @@ import { buildCustomerMessage, buildLeadEmails, parseAmountCents, sendResendEmai
 
 test('owner alert and customer copy include the inquiry without executing customer HTML',()=>{
  const lead={name:'Ada <script>alert(1)</script>',phone:'304-555-0100',email:'ada@example.com',service:'Concrete Slab',details:'Garage <b>floor</b>',photo:'data:image/png;base64,abc'};
- const {owner,customer}=buildLeadEmails(lead,{from:'ACT Concrete <estimates@act.example>',ownerEmail:'owner@act.example',siteUrl:'https://act.example'});
+ const {owner,customer}=buildLeadEmails(lead,{from:'ACT Concrete <estimates@act.example>',leadFrom:'ACT Concrete Leads <leads@act.example>',ownerEmail:'owner@act.example',siteUrl:'https://act.example'});
+ assert.equal(owner.from,'ACT Concrete Leads <leads@act.example>');
+ assert.equal(customer.from,'ACT Concrete Leads <leads@act.example>');
  assert.deepEqual(owner.to,['owner@act.example']);
  assert.deepEqual(customer.to,['ada@example.com']);
  assert.equal(owner.reply_to,'ada@example.com');
@@ -40,15 +42,17 @@ test('admin quote amounts are parsed exactly and invalid prices are rejected',()
 
 test('admin quote and message emails include the price and escape customer content',()=>{
  const lead={name:'Ada <Owner>',email:'ada@example.com',service:'Concrete Slab'};
- const config={from:'ACT Concrete <estimates@act.example>',ownerEmail:'owner@act.example'};
+ const config={from:'ACT Concrete <estimates@act.example>',quoteFrom:'ACT Concrete Quotes <quotes@act.example>',ownerEmail:'owner@act.example'};
  const quote=buildCustomerMessage(lead,config,{amountCents:125050,message:'Garage floor <script>alert(1)</script>'});
  assert.deepEqual(quote.to,['ada@example.com']);
+ assert.equal(quote.from,'ACT Concrete Quotes <quotes@act.example>');
  assert.equal(quote.reply_to,'owner@act.example');
  assert.match(quote.subject,/\$1,250\.50/);
  assert.match(quote.text,/Garage floor <script>/);
  assert.match(quote.html,/&lt;script&gt;/);
  assert.doesNotMatch(quote.html,/<script>/);
  const message=buildCustomerMessage(lead,{...config,ownerEmail:''},{amountCents:null,message:'We can visit Tuesday.'});
+ assert.equal(message.from,'ACT Concrete Quotes <quotes@act.example>');
  assert.equal(message.subject,'A message from ACT Concrete');
  assert.equal(message.reply_to,undefined);
  assert.doesNotMatch(message.text,/quoted amount/);

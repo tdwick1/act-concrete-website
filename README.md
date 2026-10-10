@@ -19,7 +19,7 @@ Open `http://localhost:3000`. The admin dashboard is at `http://localhost:3000/a
 1. Create one Railway service from this repository. Railpack reads the Node 24 requirement in `package.json` and runs `npm start`.
 2. Attach a persistent volume to the service at `/data`. Keep the service at **one replica** because SQLite and uploaded project photos live on that volume.
 3. In Railway Variables, set `ACT_DATA_DIR=/data` and a strong `ACT_ADMIN_PASSWORD`. The app binds to `0.0.0.0` automatically on Railway, and Railway supplies `PORT`. Set `SITE_URL` to the Railway HTTPS URL initially, then to the custom domain when it is connected. Open the public URL without an `:8080` suffix.
-4. Add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ACT_LEAD_EMAIL` when the sending domain is verified in Resend. Store these in Railway Variables, not in Git.
+4. Add `RESEND_API_KEY`, `RESEND_LEADS_FROM_EMAIL`, `RESEND_QUOTES_FROM_EMAIL`, and `ACT_LEAD_EMAIL` when the sending domain is verified in Resend. Store these in Railway Variables, not in Git.
 5. Enable scheduled volume backups, generate a public Railway domain, and test a lead submission and admin login before pointing a custom domain at the service.
 
 The GitHub repository intentionally excludes `.env` and the entire `data/` directory. Deploying it creates a fresh database with the two supplied gallery examples. Existing local leads and any gallery photos uploaded through the admin dashboard require a separate transfer of `data/act.db` and `data/project-media/` to the Railway volume. Do this before accepting real inquiries on the new deployment.
@@ -36,22 +36,23 @@ The dashboard also lets you edit a project's text, replace either photo, or dele
 
 Create a Resend account, verify a domain you control in Resend, and set these values in `.env` or the deployment environment:
 
-You do **not** need to run a mail server or buy a separate mailbox to send these messages. First register a domain for the business. In Resend, add that domain and copy the DNS records Resend gives you into the domain's DNS settings. After Resend marks the domain verified, replace `your-domain.com` below with the real domain. The `RESEND_FROM_EMAIL` address is the sender identity; it does not have to be an inbox. `ACT_LEAD_EMAIL` can be an email account you already use, such as Gmail, and the customer email's Reply-To points there. If you also want people to reach `estimates@your-domain.com` by typing that address directly, set up email forwarding to your existing inbox with your DNS provider or an email host.
+You do **not** need to run a mail server or buy a separate mailbox to send these messages. Verify `actconcretewv.com` in Resend by adding the DNS records Resend provides. The two addresses below are sender identities; they do not automatically become inboxes. `ACT_LEAD_EMAIL` is the existing inbox where new lead alerts arrive and where customer replies are directed. If you also want mail sent directly to `leads@actconcretewv.com` or `quotes@actconcretewv.com` to arrive, set up email forwarding or hosted mailboxes for those addresses.
 
 ```text
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL="ACT Concrete <estimates@your-domain.com>"
-ACT_LEAD_EMAIL=owner@your-domain.com
-SITE_URL=https://your-domain.com
+RESEND_LEADS_FROM_EMAIL="ACT Concrete Leads <leads@actconcretewv.com>"
+RESEND_QUOTES_FROM_EMAIL="ACT Concrete Quotes <quotes@actconcretewv.com>"
+ACT_LEAD_EMAIL=your-existing-inbox@example.com
+SITE_URL=https://actconcretewv.com
 ```
 
-Restart the server after changing the settings. Each new inquiry is saved first. Then the server queues an owner alert and, when the customer provides an email address, a copy of their inquiry for the customer. The customer message explicitly says that it is **not a price quote**. Uploaded photos stay in the private dashboard and are not attached to emails. Sending errors do not discard leads; pending emails are retried automatically, and errors are logged by the server. Email jobs are stored in `data/act.db` alongside the leads. If these variables are unset, the form still saves leads but sends no email. Do not put the Resend API key in browser code or commit `.env`.
+Restart the server after changing the settings. Each new inquiry is saved first. Then the server queues an owner alert and, when the customer provides an email address, a copy of their inquiry for the customer. Both use the leads sender. The customer message explicitly says that it is **not a price quote**. Uploaded photos stay in the private dashboard and are not attached to emails. Sending errors do not discard leads; pending emails are retried automatically, and errors are logged by the server. Email jobs are stored in `data/act.db` alongside the leads. If these variables are unset, the form still saves leads but sends no email. Do not put the Resend API key in browser code or commit `.env`.
 
 ## Send a customer message or quote
 
 In `/admin`, open a lead that includes an email address. Under **Email customer**, enter a message and, for a quote, an optional dollar amount. Review the recipient and amount in the confirmation prompt, then send. The email is queued through Resend. The lead detail shows the message, amount, and delivery status; use **Refresh status** to check for delivery. A successful quote moves an open lead to **Estimate Sent**. A message without an amount moves a new lead to **Contacted**. The history is saved in `data/act.db`.
 
-This feature requires `RESEND_API_KEY` and a verified `RESEND_FROM_EMAIL`. Set `ACT_LEAD_EMAIL` as well so customer replies go to an inbox you monitor and new lead alerts continue to work. Customers who did not provide an email cannot be emailed from the dashboard.
+Messages and quotes from this dashboard use `RESEND_QUOTES_FROM_EMAIL`; they require `RESEND_API_KEY` and a verified sender domain. Set `ACT_LEAD_EMAIL` as well so customer replies go to an inbox you monitor and new lead alerts continue to work. `RESEND_FROM_EMAIL` remains a fallback for older installations that have not set the two dedicated senders. Customers who did not provide an email cannot be emailed from the dashboard.
 
 ## Business content
 

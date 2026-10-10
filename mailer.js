@@ -6,7 +6,7 @@ export function validEmail(value){
   return typeof value==='string' && value.length<=180 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value);
 }
 
-export function buildLeadEmails(lead,{from,ownerEmail,siteUrl}){
+export function buildLeadEmails(lead,{from,leadFrom,ownerEmail,siteUrl}){
   const fields=[
     ['Name',lead.name],['Phone',lead.phone],['Email',lead.email],
     ['Property address',lead.address],['City',lead.city],['Service',lead.service],
@@ -21,13 +21,13 @@ export function buildLeadEmails(lead,{from,ownerEmail,siteUrl}){
   const base=siteUrl?.replace(/\/$/,'');
   const adminLink=base?`<p><a href="${escapeHtml(base)}/admin" style="color:#216b18">Open the lead dashboard</a></p>`:'';
   const owner={
-    from,to:[ownerEmail],subject:`New ACT Concrete inquiry: ${lead.service}`,
+    from:leadFrom||from,to:[ownerEmail],subject:`New ACT Concrete inquiry: ${lead.service}`,
     html:`<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">New project inquiry</h1><p>A new lead was saved in the ACT Concrete dashboard.</p><table style="border-collapse:collapse">${rows}</table>${adminLink}</div>`,
     text:`New project inquiry\n\n${plain}${base?`\n\nOpen the lead dashboard: ${base}/admin`:''}`
   };
   if(lead.email)owner.reply_to=lead.email;
   const customer=lead.email?{
-    from,to:[lead.email],subject:'ACT Concrete received your project inquiry',
+    from:leadFrom||from,to:[lead.email],subject:'ACT Concrete received your project inquiry',
     html:`<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">Thanks for reaching out.</h1><p>We received your project inquiry. Here is a copy of the information you sent:</p><table style="border-collapse:collapse">${rows}</table><p>This is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.</p><p>Need to talk sooner? Call <a href="tel:+13043772690">304-377-2690</a>.</p></div>`,
     text:`Thanks for reaching out to ACT Concrete. We received your project inquiry.\n\n${plain}\n\nThis is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.\nNeed to talk sooner? Call 304-377-2690.`
   }:null;
@@ -45,12 +45,12 @@ export function parseAmountCents(value){
   return total;
 }
 
-export function buildCustomerMessage(lead,{from,ownerEmail},{amountCents,message}){
+export function buildCustomerMessage(lead,{from,quoteFrom,ownerEmail},{amountCents,message}){
   const amount=amountCents===null?null:new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amountCents/100);
   const heading=amount?'Your ACT Concrete quote':'A message from ACT Concrete';
   const intro=amount?`For your ${lead.service} inquiry, the quoted amount is ${amount}.`:`Regarding your ${lead.service} inquiry:`;
   const email={
-    from,to:[lead.email],subject:amount?`Your ACT Concrete quote: ${amount}`:heading,
+    from:quoteFrom||from,to:[lead.email],subject:amount?`Your ACT Concrete quote: ${amount}`:heading,
     html:`<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">${heading}</h1><p>Hello ${escapeHtml(lead.name)},</p><p>${escapeHtml(intro)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p>Questions? Reply to this email or call <a href="tel:+13043772690">304-377-2690</a>.</p><p>ACT Concrete</p></div>`,
     text:`${heading}\n\nHello ${lead.name},\n\n${intro}\n\n${message}\n\nQuestions? Reply to this email or call 304-377-2690.\n\nACT Concrete`
   };
