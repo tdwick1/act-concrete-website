@@ -155,4 +155,4 @@ const server=http.createServer(async(req,res)=>{try{
  if(!file.startsWith(publicDir+path.sep)&&file!==path.join(root,'index.html')){res.writeHead(403);return res.end();}
  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404);return res.end('Not found');}res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream'});res.end(data);});
 }catch(e){console.error(e);if(!res.headersSent)json(res,500,{error:'Unable to complete the request.'});}});
-const port=Number(process.env.PORT||3000),host=process.env.HOST||'127.0.0.1';server.listen(port,host,()=>console.log(`ACT Concrete website: http://localhost:${port}`));
+const port=Number(process.env.PORT||3000),host=process.env.HOST||(process.env.RAILWAY_ENVIRONMENT_NAME?'0.0.0.0':'127.0.0.1');server.listen(port,host,()=>console.log(`ACT Concrete website listening on ${host}:${port}`));

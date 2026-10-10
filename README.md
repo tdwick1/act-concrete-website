@@ -18,7 +18,7 @@ Open `http://localhost:3000`. The admin dashboard is at `http://localhost:3000/a
 
 1. Create one Railway service from this repository. Railpack reads the Node 24 requirement in `package.json` and runs `npm start`.
 2. Attach a persistent volume to the service at `/data`. Keep the service at **one replica** because SQLite and uploaded project photos live on that volume.
-3. In Railway Variables, set `ACT_DATA_DIR=/data`, `HOST=0.0.0.0`, and a strong `ACT_ADMIN_PASSWORD`. Railway supplies `PORT` automatically. Set `SITE_URL` to the Railway HTTPS URL initially, then to the custom domain when it is connected.
+3. In Railway Variables, set `ACT_DATA_DIR=/data` and a strong `ACT_ADMIN_PASSWORD`. The app binds to `0.0.0.0` automatically on Railway, and Railway supplies `PORT`. Set `SITE_URL` to the Railway HTTPS URL initially, then to the custom domain when it is connected. Open the public URL without an `:8080` suffix.
 4. Add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ACT_LEAD_EMAIL` when the sending domain is verified in Resend. Store these in Railway Variables, not in Git.
 5. Enable scheduled volume backups, generate a public Railway domain, and test a lead submission and admin login before pointing a custom domain at the service.
 
