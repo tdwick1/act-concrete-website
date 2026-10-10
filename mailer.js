@@ -6,7 +6,7 @@ export function validEmail(value){
   return typeof value==='string' && value.length<=180 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value);
 }
 
-export function buildLeadEmails(lead,{from,leadFrom,ownerEmail,siteUrl}){
+export function buildLeadEmails(lead,{from,leadFrom,quoteFrom,ownerEmail,siteUrl}){
   const fields=[
     ['Name',lead.name],['Phone',lead.phone],['Email',lead.email],
     ['Property address',lead.address],['City',lead.city],['Service',lead.service],
@@ -27,7 +27,7 @@ export function buildLeadEmails(lead,{from,leadFrom,ownerEmail,siteUrl}){
   };
   if(lead.email)owner.reply_to=lead.email;
   const customer=lead.email?{
-    from:leadFrom||from,to:[lead.email],subject:'ACT Concrete received your project inquiry',
+    from:quoteFrom||from,to:[lead.email],subject:'ACT Concrete received your project inquiry',
     html:`<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">Thanks for reaching out.</h1><p>We received your project inquiry. Here is a copy of the information you sent:</p><table style="border-collapse:collapse">${rows}</table><p>This is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.</p><p>Need to talk sooner? Call <a href="tel:+13043772690">304-377-2690</a>.</p></div>`,
     text:`Thanks for reaching out to ACT Concrete. We received your project inquiry.\n\n${plain}\n\nThis is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.\nNeed to talk sooner? Call 304-377-2690.`
   }:null;

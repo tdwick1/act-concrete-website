@@ -48,7 +48,7 @@ ACT_LEAD_EMAIL=your-existing-inbox@example.com
 SITE_URL=https://actconcretewv.com
 ```
 
-Restart the server after changing the settings. Each new inquiry is saved first. Then the server queues an owner alert and, when the customer provides an email address, a copy of their inquiry for the customer. Both use the leads sender. The customer message explicitly says that it is **not a price quote**. Uploaded photos stay in the private dashboard and are not attached to emails. Sending errors do not discard leads; pending emails are retried automatically, and errors are logged by the server. Email jobs are stored in `data/act.db` alongside the leads. If these variables are unset, the form still saves leads but sends no email. Do not put the Resend API key in browser code or commit `.env`.
+Restart the server after changing the settings. Each new inquiry is saved first. Then the server queues an owner alert from the leads sender and, when the customer provides an email address, a confirmation copy from the quotes sender. The customer message explicitly says that it is **not a price quote**. Uploaded photos stay in the private dashboard and are not attached to emails. Sending errors do not discard leads; pending emails are retried automatically, and errors are logged by the server. Email jobs are stored in `data/act.db` alongside the leads. If these variables are unset, the form still saves leads but sends no email. Do not put the Resend API key in browser code or commit `.env`.
 
 ## Send a customer message or quote
 
