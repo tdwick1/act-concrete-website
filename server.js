@@ -165,7 +165,7 @@ const server=http.createServer(async(req,res)=>{try{
     setImmediate(processEmailQueue);
     return json(res,202,{ok:true,id:messageId,status:'pending'});
    }
-   if(!part&&req.method==='GET')return json(res,200,{lead:{...lead,photo:undefined},notes:db.prepare('SELECT id,created_at,body FROM notes WHERE lead_id=? ORDER BY created_at DESC').all(id),messages:db.prepare('SELECT m.id,m.created_at,m.recipient,m.amount_cents,m.body,j.status,j.sent_at,j.last_error FROM outbound_messages m JOIN email_jobs j ON j.id=m.email_job_id WHERE m.lead_id=? ORDER BY m.created_at DESC, m.rowid DESC').all(id),quoteEmailConfigured});
+   if(!part&&req.method==='GET')return json(res,200,{lead:{...lead,photo:undefined,has_photo:Boolean(lead.photo)},notes:db.prepare('SELECT id,created_at,body FROM notes WHERE lead_id=? ORDER BY created_at DESC').all(id),messages:db.prepare('SELECT m.id,m.created_at,m.recipient,m.amount_cents,m.body,j.status,j.sent_at,j.last_error FROM outbound_messages m JOIN email_jobs j ON j.id=m.email_job_id WHERE m.lead_id=? ORDER BY m.created_at DESC, m.rowid DESC').all(id),quoteEmailConfigured});
    if(!part&&req.method==='PATCH'){const b=await read(req);if(!statuses.has(b.status))return json(res,400,{error:'Invalid status.'});db.prepare('UPDATE leads SET status=? WHERE id=?').run(b.status,id);return json(res,200,{ok:true});}
    if(!part&&req.method==='DELETE'){db.exec('BEGIN');try{db.prepare('DELETE FROM notes WHERE lead_id=?').run(id);db.prepare('DELETE FROM outbound_messages WHERE lead_id=?').run(id);db.prepare('DELETE FROM email_jobs WHERE lead_id=?').run(id);db.prepare('DELETE FROM leads WHERE id=?').run(id);db.exec('COMMIT')}catch(error){db.exec('ROLLBACK');throw error;}return json(res,200,{ok:true});}
   }
