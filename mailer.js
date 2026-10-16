@@ -67,8 +67,8 @@ export function buildLeadEmails(
         from: quoteFrom || from,
         to: [lead.email],
         subject: "ACT Concrete received your project inquiry",
-        html: `<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">Thanks for reaching out.</h1><p>We received your project inquiry. Here is a copy of the information you sent:</p><table style="border-collapse:collapse">${rows}</table><p>This is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.</p><p>Need to talk sooner? Call <a href="tel:+13044154277">304-415-4277</a>.</p></div>`,
-        text: `Thanks for reaching out to ACT Concrete. We received your project inquiry.\n\n${plain}\n\nThis is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.\nNeed to talk sooner? Call 304-415-4277.`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">Thanks for reaching out.</h1><p>We received your project inquiry. Here is a copy of the information you sent:</p><table style="border-collapse:collapse">${rows}</table><p>This is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.</p><p>Need to talk sooner? Call <a href="tel:+13045144277">304-514-4277</a>.</p></div>`,
+        text: `Thanks for reaching out to ACT Concrete. We received your project inquiry.\n\n${plain}\n\nThis is a copy of your request, not a price quote. ACT Concrete will review it and contact you about the next steps.\nNeed to talk sooner? Call 304-514-4277.`,
       }
     : null;
   if (customer) customer.reply_to = ownerEmail;
@@ -110,8 +110,8 @@ export function buildCustomerMessage(
     from: quoteFrom || from,
     to: [lead.email],
     subject: amount ? `Your ACT Concrete quote: ${amount}` : heading,
-    html: `<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">${heading}</h1><p>Hello ${escapeHtml(lead.name)},</p><p>${escapeHtml(intro)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p>Questions? Reply to this email or call <a href="tel:+13044154277">304-415-4277</a>.</p><p>ACT Concrete</p></div>`,
-    text: `${heading}\n\nHello ${lead.name},\n\n${intro}\n\n${message}\n\nQuestions? Reply to this email or call 304-415-4277.\n\nACT Concrete`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:640px;color:#101810"><h1 style="color:#258b19">${heading}</h1><p>Hello ${escapeHtml(lead.name)},</p><p>${escapeHtml(intro)}</p><p style="white-space:pre-wrap">${escapeHtml(message)}</p><p>Questions? Reply to this email or call <a href="tel:+13045144277">304-514-4277</a>.</p><p>ACT Concrete</p></div>`,
+    text: `${heading}\n\nHello ${lead.name},\n\n${intro}\n\n${message}\n\nQuestions? Reply to this email or call 304-514-4277.\n\nACT Concrete`,
   };
   if (validEmail(ownerEmail)) email.reply_to = ownerEmail;
   return email;

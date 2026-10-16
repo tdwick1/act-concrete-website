@@ -64,7 +64,7 @@ test("an inquiry photo is saved and visible through the admin lead detail", asyn
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: "Photo Test",
-        phone: "304-415-4277",
+        phone: "304-514-4277",
         service: "Concrete Slab",
         photo,
       }),

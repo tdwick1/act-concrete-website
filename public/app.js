@@ -1,5 +1,5 @@
-const PHONE = "304-415-4277",
-  TEL = "tel:+13044154277",
+const PHONE = "304-514-4277",
+  TEL = "tel:+13045144277",
   FB = "https://www.facebook.com/p/ACT-Concrete-61594546767402/";
 const img = {
   logo: "/images/act-logo.webp",
@@ -563,7 +563,7 @@ function render() {
   document.querySelector('link[rel="canonical"]').href = location.origin + path;
   document.querySelector('meta[name="description"]').content =
     path === "/contact"
-      ? "Request a free concrete estimate from ACT Concrete. Share your project details online or call 304-415-4277."
+      ? "Request a free concrete estimate from ACT Concrete. Share your project details online or call 304-514-4277."
       : path === "/projects"
         ? "Explore authentic ACT Concrete walkway and slab project photographs."
         : "ACT Concrete provides concrete walkway and slab work. Explore real projects and request a free estimate.";

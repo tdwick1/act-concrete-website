@@ -11,7 +11,7 @@ import {
 test("owner alert and customer copy include the inquiry without executing customer HTML", () => {
   const lead = {
     name: "Ada <script>alert(1)</script>",
-    phone: "304-415-4277",
+    phone: "304-514-4277",
     email: "ada@example.com",
     service: "Concrete Slab",
     details: "Garage <b>floor</b>",
