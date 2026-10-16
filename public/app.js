@@ -2,7 +2,7 @@ const PHONE = "304-514-4277",
   TEL = "tel:+13045144277",
   FB = "https://www.facebook.com/p/ACT-Concrete-61594546767402/";
 const img = {
-  logo: "/images/act-logo.webp",
+  logo: "/images/act-logo-304-514-4277.png",
   walk: "/images/walkway-finished.webp",
   walkPrep: "/images/walkway-prep.webp",
   slab: "/images/slab-finished.webp",
